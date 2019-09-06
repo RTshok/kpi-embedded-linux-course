@@ -23,7 +23,6 @@ int main (int argc, char ** argv){
             case 'M':
                 pthread_mutex_init(&foo_args -> mutex, NULL);
                 foo_args -> mutex_enable = true;
-                printf("Running threads blocked by mutex..\n");
                 break;
             case 'a':
                 foo_args -> inc_amnt = atoi(optarg);
@@ -43,18 +42,20 @@ int main (int argc, char ** argv){
                 break;
         }
     }
-    if(foo_args -> inc_amnt <= 0){
+    if(foo_args -> inc_amnt <= 0) {
         printf("-a <value> is mandatory! \n");
         return 0;
     }
-    pthread_t thr1, thr2;
 
+    pthread_t thr1, thr2;
     pthread_create(&thr1, NULL, inc_foo, (void *)foo_args);
     pthread_create(&thr2, NULL, inc_foo, (void *)foo_args);
-
-    if(foo_args -> is_verbose && foo_args -> mutex_enable)
+    if(foo_args -> is_verbose) {
         printf("Threads created !\n");
-
+        if(foo_args -> mutex_enable)
+            printf("Running threads blocked by mutex..\n");
+    }
+   
     pthread_join(thr1, NULL);
     pthread_join(thr2, NULL);
 
@@ -70,7 +71,6 @@ void* inc_foo(void* args){
         if(arguments -> is_verbose)
             printf("Thread locked !\n");
     }
-
     for(volatile long long int i = 0; i < arguments -> inc_amnt; i++)
         global_cnt++;
     
