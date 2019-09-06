@@ -5,60 +5,80 @@
 #include <getopt.h>
 #include <stdbool.h>
 
-
-bool mutex_enable = false; 
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-long long int inc_amnt = 1000000;
+// TODO: add .gitignore, README.rst, fix Makefile, add license
 volatile long long int global_cnt = 0;
-
-void* inc_foo(void* str);
+struct arg_struct {
+    bool mutex_enable;
+    pthread_mutex_t mutex;
+    long long int inc_amnt;
+    bool is_verbose;
+};
+void* inc_foo(void*);
 int main (int argc, char ** argv){      
     int opt;
-    while((opt = getopt(argc, argv, "Mha:")) != -1){
+    struct arg_struct* foo_args = malloc(sizeof(struct arg_struct));
+    
+    while((opt = getopt(argc, argv, "Mhva:")) != -1){
         switch(opt){
             case 'M':
-                mutex_enable = true;
+                pthread_mutex_init(&foo_args -> mutex, NULL);
+                foo_args -> mutex_enable = true;
                 printf("Running threads blocked by mutex..\n");
                 break;
             case 'a':
-                inc_amnt = atoi(optarg);
+                foo_args -> inc_amnt = atoi(optarg);
                 break;
+            case '?':
+            //fall-through
             case 'h':
-                printf("usage : ./a.out \n");
-                printf("-M for enabling mutex\n");
-                printf("-a <value> for counting till that value (by default 1000000)\n");
+                printf("usage : ./a.out -a <value>\n");
+                printf("'-M' for enabling mutex.\n");
+                printf("'-a' <value> setting value to which threads will count to. \n");
+                printf("'-v' to have more output information.\n");
+                printf("'-h' for help.\n");
                 return 0;
-
+                break;
+            case 'v':
+                foo_args -> is_verbose = true;
+                break;
         }
     }
+    if(foo_args -> inc_amnt <= 0){
+        printf("-a <value> is mandatory! \n");
+        return 0;
+    }
     pthread_t thr1, thr2;
-    char* str1 = "First thread\n";
-    char* str2 = "Second thread\n";
 
-    pthread_create(&thr1, NULL, inc_foo, (void *)str1);
-    pthread_create(&thr2, NULL, inc_foo, (void *)str2);
-    
-    printf("Threads created !\n");
+    pthread_create(&thr1, NULL, inc_foo, (void *)foo_args);
+    pthread_create(&thr2, NULL, inc_foo, (void *)foo_args);
+
+    if(foo_args -> is_verbose && foo_args -> mutex_enable)
+        printf("Threads created !\n");
 
     pthread_join(thr1, NULL);
     pthread_join(thr2, NULL);
 
-    printf(" the global cnt is :%lld\n", global_cnt);
+    free(foo_args);
+    printf("global cnt is :%lld\n", global_cnt);
     return 0;
 }
 
-void* inc_foo(void* str){
-    char* msg; 
-    msg = (char *)str;
-    if(mutex_enable)
-        pthread_mutex_lock(&mutex1);
-    
-    for(volatile long long int i = 0; i < inc_amnt; i++){
-        global_cnt++;
-        //printf("%s :%d\n", msg, global_cnt);
-       // usleep(10);
+void* inc_foo(void* args){
+    struct arg_struct* arguments = (struct arg_struct *)args;
+    if(arguments -> mutex_enable){
+        pthread_mutex_lock(&arguments -> mutex);
+        if(arguments -> is_verbose)
+            printf("Thread locked !\n");
     }
-    if(mutex_enable)
-        pthread_mutex_unlock(&mutex1);
+
+    for(volatile long long int i = 0; i < arguments -> inc_amnt; i++)
+        global_cnt++;
+    
+    if(arguments -> mutex_enable) {
+        pthread_mutex_unlock(&arguments -> mutex);
+        if(arguments -> is_verbose)
+           printf("Thread unlocked !\n");
+    }
+        
     return NULL;
 }
