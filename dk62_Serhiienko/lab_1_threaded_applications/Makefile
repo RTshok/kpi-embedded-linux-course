@@ -2,7 +2,7 @@ CC = gcc
 CC_ARM = arm-linux-gnueabihf-gcc
 CFLAGS_O2 = -O2 -pthread
 CFLAGS_O0 = -O0 -pthread
-DEPS = thread
+DEPS = src/thread
 OUT = test.out
 all: clean build
 clean:
