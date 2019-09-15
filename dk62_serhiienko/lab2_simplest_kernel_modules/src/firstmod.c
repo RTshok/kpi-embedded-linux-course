@@ -12,7 +12,7 @@ MODULE_LICENSE("Dual MIT/GPL");		// this affects the kernel behavior
 static char *username = "NONE";
 module_param(username, charp, 0000);
 MODULE_PARM_DESC(username, "Name of user who's using this module");
-
+static void tasklet_handler(unsigned long _unused);
 DECLARE_TASKLET(tasklet, tasklet_handler, 0);
 static void tasklet_handler(unsigned long _unused)
 {
