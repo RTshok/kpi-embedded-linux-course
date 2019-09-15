@@ -5,8 +5,8 @@
 #include <linux/interrupt.h>
 
 MODULE_DESCRIPTION("Basic module demo: init, deinit, printk, jiffies");
-MODULE_AUTHOR("thodnev");
-MODULE_VERSION("0.1");
+MODULE_AUTHOR("rtchoke");
+MODULE_VERSION("0.2");
 MODULE_LICENSE("Dual MIT/GPL");		// this affects the kernel behavior
 
 static char *username = "NONE";

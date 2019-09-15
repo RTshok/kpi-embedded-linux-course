@@ -45,9 +45,10 @@ src/*.ko
 
 # Kernel Module Compile Results
 src/*.mod*
-*.cmd
+src/*.cmd
 .tmp_versions/
 modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+.vscode/
