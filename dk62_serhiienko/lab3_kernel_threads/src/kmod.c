@@ -26,6 +26,8 @@ struct k_list {
         int data;
 }
 LIST_HEAD(head_list);
+struct k_list *list;
+
 static int thread_func(void *args)
 {
 
@@ -33,8 +35,17 @@ static int thread_func(void *args)
 }
 static void print_list(void)
 {
+        struct list_head *listptr;
+        struct k_list *entry;
+        printk(KERN_ALERT "Show_list\n");
 
+        list_for_each(listptr, &head_list) 
+        {
+                entry = list_entry(listptr, struct k_list, test_list);
 
+                printk(KERN_INFO "Thread number %d, count to =  %d ", \
+                                entry->thread_cnt, entry->count_val);
+        }
 }
 static void delete_list(void)
 {
@@ -46,13 +57,11 @@ static inline void lock(atomic_t *lock)
 {
         while(*lock);
         cas(lock, 0, 1); // if lock == 0 ? lock = 1 : lock = 0
-
 }
 
 static inline void unlock(atomic_t *lock)
 {
         *lock = 0;
- 
 }
 static int __init threads_test_init(void)
 {
