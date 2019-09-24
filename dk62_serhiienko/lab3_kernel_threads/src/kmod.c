@@ -23,33 +23,48 @@ module_param(inc_cnt, int, 0000);
 
 struct k_list {
         struct list_head list;
+        int thr_num;
         int data;
-}
-LIST_HEAD(head_list);
-struct k_list *list;
+};
+struct k_list *klist;
+struct list_head head_list;
 
 static int thread_func(void *args)
 {
+        lock(&my_lock);
+        for(int i = 0; i < inc_cnt; i++, *(int*)args++);
 
+        klist = kmalloc(sizeof(struct k_list), GFP_KERNEL);       
+        if(NULL == klist) {
+                printk(KERN_ERR "Can't allocate memory for list");
+                //goto..
+        }
 
+        klist->data = *(int*)args;
+        klist->thr_num = (*(int*)args) / inc_cnt;
+        list_add(&klist->list, &head_list);
+        unlock(&my_lock);
+        return 0;
 }
 static void print_list(void)
 {
-        struct list_head *listptr;
-        struct k_list *entry;
-        printk(KERN_ALERT "Show_list\n");
-
-        list_for_each(listptr, &head_list) 
-        {
-                entry = list_entry(listptr, struct k_list, test_list);
-
-                printk(KERN_INFO "Thread number %d, count to =  %d ", \
-                                entry->thread_cnt, entry->count_val);
+        struct k_list *_list = NULL;
+        struct list_head *entry_ptr = NULL;
+        list_for_each(entry_ptr, &head_list) {
+                _list = list_entry(entry_ptr, struct k_list, list);
+                printk(KERN_INFO" thread %d has data: %d\n", _list->thr_num, _list->data);
         }
 }
 static void delete_list(void)
 {
-
+        struct k_list *_list = NULL;
+        struct list_head *entry_ptr = NULL;
+        list_for_each(entry_ptr, &head_list) {
+                _list = list_entry(entry_ptr, struct k_list, list);  
+                printk(KERN_NOTICE "Deleting #%d!\n", _list->thr_num);
+                list_del(entry_ptr);
+                kfree(_list);
+        }
 
 }
 
@@ -65,6 +80,7 @@ static inline void unlock(atomic_t *lock)
 }
 static int __init threads_test_init(void)
 {
+        INIT_LIST_HEAD(&head_list);
         static int *cnt = kmalloc(sizeof(*cnt), GFP_KERNEL);
         if(NULL == cnt) {
                 printk(KERN_ERR "Can't allocate memory for counter");
