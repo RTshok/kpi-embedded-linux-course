@@ -2,8 +2,8 @@
 # (!) using paths with spaces may not work with Kbuild
 
 # this is what is used by Kbuild
-obj-m += src/firstmod.o
-
+obj-m += src/thrkmod.o
+EXTRA_CFLAGS:= -std=gnu11
 # directory containing Makefile for kernel build
 KBUILDDIR := /lib/modules/$(shell uname -r)/build/
 
