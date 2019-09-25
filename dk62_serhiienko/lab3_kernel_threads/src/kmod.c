@@ -17,9 +17,12 @@ MODULE_LICENSE("Dual MIT/GPL");		// this affects the kernel behavior
 static struct task_struct **thread_st;
 static int thr_amnt = 0;
 static int inc_cnt = 0;
+static int *glob_cnt;
 atomic_t my_lock = ATOMIC_INIT(0);
 module_param(thr_amnt, int, 0000);
+MODULE_PARAM_DESC(thr_amnt, "Amount of threads");
 module_param(inc_cnt, int, 0000);
+MODULE_PARAM_DESC(inc_cnt, "How many times counter will increment in every thread");
 
 struct k_list {
         struct list_head list;
@@ -81,7 +84,7 @@ static inline void unlock(atomic_t *lock)
 static int __init threads_test_init(void)
 {
         INIT_LIST_HEAD(&head_list);
-        static int *cnt = kmalloc(sizeof(*cnt), GFP_KERNEL);
+        glob_cnt = kmalloc(sizeof(*cnt), GFP_KERNEL);
         if(NULL == cnt) {
                 printk(KERN_ERR "Can't allocate memory for counter");
                 // goto...
@@ -92,11 +95,23 @@ static int __init threads_test_init(void)
                 printk(KERN_ERR "Can't allocate memory for threads");
                 // goto..
         }
+        for (int i = 0; i < thr_amnt; i++) 
+		kthread_t[i] = kthread_run(thread_func, (void*)global_count, "thread%d", i);	
 
+	kfree(kthread_t);	
+
+	return 0;
 }
 
 static void __exit threads_test_exit(void)
 {
-
-
+        printk(KERN_ALERT "Global counter = %d \n", *count)
+        print_list();
+        delete_list();
+        kfree(klist);
+        kfree(glob_cnt);
+        printk(KERN_ALERT "EXIT!\n");
 }
+
+module_init(threads_test_init);
+module_exit(threads_test_exit);
