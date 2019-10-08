@@ -78,10 +78,10 @@ static struct k_list {
         long long data;
 };
 
-struct task_struct *kthread_tmr, *kthread_wrk;
-struct delayed_work my_work;
-struct timer_list my_timer;
-struct completion timer_done, work_done;
+static struct task_struct *kthread_tmr, *kthread_wrk;
+static struct delayed_work my_work;
+static struct timer_list my_timer;
+static struct completion timer_done, work_done;
 DECLARE_COMPLETION(work_done);
 DECLARE_COMPLETION(timer_done);
 DEFINE_TIMER(my_timer, &timer_handler);
