@@ -22,6 +22,7 @@ all: | tidy modules run
 # recur to the original kernel Makefile with some additions
 modules: .build
 	cd $< && $(MAKE) -C "$(KBUILDDIR)" M="$(PWD)/$<" modules
+	gcc ../src/test.c -o test
 
 tidy:
 	-rm -rf .build
@@ -39,6 +40,6 @@ clean:
 
 .ONESHELL:
 run:
-	sudo sh -c "insmod .build/$(obj-m:.o=.ko); sleep 1; rmmod $(obj-m:.o=); sleep 1; dmesg -k | tail -10"
+	sudo sh -c "insmod .build/$(obj-m:.o=.ko); sleep 1; .build/test rmmod $(obj-m:.o=); sleep 1; dmesg -k | tail -10"
 
 	

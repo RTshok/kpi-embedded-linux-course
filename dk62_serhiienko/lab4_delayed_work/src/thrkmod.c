@@ -64,6 +64,7 @@ static struct thr_struct {
 };
 static struct task_struct *kthread_tmr, *kthread_wrk;
 static struct delayed_work my_work;
+//DEFINE_TIMER(my_timer, &timer_handler);
 //static struct timer_list my_timer;
 //static struct completion timer_done, work_done;
 DECLARE_COMPLETION(work_done);

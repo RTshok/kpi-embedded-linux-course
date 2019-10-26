@@ -17,6 +17,9 @@
 #include <linux/errno.h>
 #include <linux/slab.h>
 #include <linux/cdev.h>
+#include <linux/ioctl.h>	// used by ioctl calls
+#include <linux/cdev.h>		// used by char dev
+#include <linux/uaccess.h>	// used by copy_to/from_user 
 
 MODULE_DESCRIPTION("Character device demo");
 MODULE_AUTHOR("rtchoke");
@@ -72,7 +75,7 @@ struct hive_item {
 };
 
 struct rb_root hive_tree = RB_ROOT;
-
+static struct class *hive_class = NULL;
 static const char magic_phrase[] = "Wow, we made these bees TWERK !";
 
 static char *devname = THIS_MODULE->name;
@@ -88,13 +91,13 @@ MODULE_PARM_DESC(buffsize, "Char buffer size. Defaults to 2 * sizeof magic_phras
 dev_t hive_dev = 0;	// Stores our device handle
 static struct cdev hive_cdev; // scull-initialized
 
-static int hive_tree_add_item(struct rb_root *root, strut hive_item *data)
+static int hive_tree_add_item(struct rb_root *root, struct hive_item *data)
 {
        struct rb_node **new_item = &(root->rb_node), *parent = NULL;
 
        while(*new_item) {
                struct hive_item *this = container_of(*new_item, struct hive_item, node);
-               int result = memcmp(data->file, this->file, sizeof(struct file *));
+               int result = memcmp(data->file, this->file, sizeof(struct file ));
                parent = *new_item;
                if(result < 0) {
                        new_item = &((*new_item)->rb_left);
@@ -121,7 +124,7 @@ static void hive_tree_rm_item(struct hive_item *item)
         kfree(item);
 }
 
-static int hive_tree_get_item(struct rb_root *root, struct file *file)
+static struct hive_item *hive_tree_get_item(struct rb_root *root, struct file *file)
 {
         struct rb_node *node = root->rb_node;
         
@@ -130,9 +133,9 @@ static int hive_tree_get_item(struct rb_root *root, struct file *file)
                 int res;
 
                 res = memcmp(item->file, file, sizeof(struct file *));
-                if(result < 0) {
+                if(res < 0) {
                        node = node->rb_left;
-                } else if (result > 0) {
+                } else if (res > 0) {
                        node = node->rb_right;
                 } 
                 else {
@@ -142,10 +145,8 @@ static int hive_tree_get_item(struct rb_root *root, struct file *file)
         }
         return NULL;
 }
-/**
- * hive_flist_new() - creates list item having buffer
- * @buffer_size: numer of characters in buffer
- */
+
+
 static inline struct hive_item *hive_tree_new(unsigned long buffer_size)
 {
 	// (!) here's where kernel memory (probably containing secrets) leaks
@@ -169,45 +170,13 @@ static inline struct hive_item *hive_tree_new(unsigned long buffer_size)
 	return item;
 }
 
-/**
- * hive_flist_rm() - deletes item from list and frees memory
- * @item: list item
- */
-static inline void hive_flist_rm(struct hive_item *item)
-{
-	if (NULL == item)
-		return;
-	list_del(&item->list);
-	kfree(item->buffer);
-	kfree(item);
-}
-
-/**
- * hive_flist_get - searches the list
- * @file: field of the list
- *
- * Return: item having the field or NULL if not found
- */
-static struct hive_item *hive_flist_get(struct file *file)
-{
-	struct hive_item *item;
-	list_for_each_entry(item, &hive_flist, list) {
-		if (item->file == file)
-			return item;
-	}
-	// not found
-	MOD_DEBUG(KERN_ERR, "Expected list entry not found %p", file);
-	return NULL;
-}
-
-
 // For more, see LKD 3rd ed. chapter 13
 /**
  * cdev_open() - callback for open() file operation
  * @inode: information to manipulate the file (unused)
  * @file: VFS file opened by a process
  *
- * Allocates memory, creates fd entry and adds it to linked list
+ * Allocates memory, creates fd entry and adds it to the rbt
  */
 static int cdev_open(struct inode *inode, struct file *file)
 {
@@ -233,10 +202,10 @@ static int cdev_open(struct inode *inode, struct file *file)
  */
 static int cdev_release(struct inode *inode, struct file *file)
 {
-	struct hive_item *item = hive_tree_get_item(file);
+	struct hive_item *item = hive_tree_get_item(&hive_tree, file);
 	if (NULL == item)
 		return -EBADF;
-	// remove item from list and free its memory
+	// remove item from tree and free its memory
 	hive_tree_rm_item(item);
 	MOD_DEBUG(KERN_DEBUG, "File entry %p unlinked", file);
 	return 0;
@@ -252,7 +221,7 @@ static int cdev_release(struct inode *inode, struct file *file)
 static ssize_t cdev_read(struct file *file, char __user *buf, 
 			 size_t count, loff_t *loff)
 {
-	struct hive_item *item = hive_flist_get(file);
+	struct hive_item *item = hive_tree_get_item(&hive_tree, file);
 	if (NULL == item)
 		return -EBADF;
 	// TODO: Add buffer read logic. Make sure seek operations work
@@ -264,7 +233,7 @@ static ssize_t cdev_read(struct file *file, char __user *buf,
         
         if(curr_pos > item->length)
                 return result;
-        if((curr_pos + count)) > item->length) {
+        if((curr_pos + count) > item->length) {
                 MOD_DEBUG(KERN_DEBUG, "READ beyond bounds!");
                 count = item->length - curr_pos;
         }
@@ -289,7 +258,7 @@ static ssize_t cdev_read(struct file *file, char __user *buf,
 static ssize_t cdev_write(struct file *file, const char __user *buf,
 			  size_t count, loff_t *loff)
 {
-	struct hive_item *item = hive_tree_get_item(file);
+	struct hive_item *item = hive_tree_get_item(&hive_tree, file);
 	if (NULL == item)
 		return -EBADF;
 	// TODO: Add buffer write logic. Make sure seek operations work
@@ -298,7 +267,7 @@ static ssize_t cdev_write(struct file *file, const char __user *buf,
         ssize_t result = -ENOMEM;
         loff_t curr_pos = *loff;
 
-       if((curr_pos + count)) > item->length) {
+       if((curr_pos + count) > item->length) {
                 MOD_DEBUG(KERN_DEBUG, "WRITE beyond bounds!");
                 return result;
         }
@@ -314,7 +283,7 @@ static ssize_t cdev_write(struct file *file, const char __user *buf,
 static loff_t cdev_lseek(struct file *file, loff_t offset, int option)
 {
         loff_t new_position = 0;
-        struct hive_item *item = hive_tree_get_item(file);
+        struct hive_item *item = hive_tree_get_item(&hive_tree, file);
         if (NULL == item)
 		return -EBADF;
 
@@ -326,15 +295,15 @@ static loff_t cdev_lseek(struct file *file, loff_t offset, int option)
                 new_position = file->f_pos + offset;
                 break;
         case SEEK_END:
-                new_offset = sizeof(item->buffer) / sizeof(item->buffer[0]);
+                offset = sizeof(item->buffer) / sizeof(item->buffer[0]);
                 break;
         default:
-                new_offset = -EINVAL;
-                return new_offset;
+                offset = -EINVAL;
+                return offset;
         }
         
-        file->f_pos = new_offset;
-        MOD_DEBUG(KERN_DEBUG, "Seeking to position: %d\n", \
+        file->f_pos = offset;
+        MOD_DEBUG(KERN_DEBUG, "Seeking to position: %ld\n", \
                                 (long)new_position);
 
 }
@@ -342,7 +311,7 @@ static loff_t cdev_lseek(struct file *file, loff_t offset, int option)
 long cdev_ioctl (struct file *file, unsigned int ioctl_num,
                         unsigned long ioctl_param)
 {
-        struct hive_item *item = hive_tree_get_item(file);
+        struct hive_item *item = hive_tree_get_item(&hive_tree, file);
         if (NULL == item)
 		return -EBADF;
         switch(ioctl_num) {
@@ -409,6 +378,8 @@ static void module_cleanup(void)
 	// notice: deallocations happen in *reverse* order
 	if (alloc_flags.cdev_added) {
 		cdev_del(&hive_cdev);
+                device_destroy(hive_class, hive_dev);
+    		class_destroy(hive_class);
 	}
 	if (alloc_flags.dev_created) {
 		unregister_chrdev_region(hive_dev, 1);
@@ -418,10 +389,6 @@ static void module_cleanup(void)
 	for(struct rb_node *node = rb_first(&hive_tree); node; node = rb_next(node)) {
                 item = rb_entry(node, struct hive_item, node);
 		hive_tree_rm_item(item);
-	}
-	list_for_each_entry(item, &hive_flist, list) {
-		
-		//MOD_DEBUG(KERN_DEBUG, "lst cleanup (should never happen)");
 	}
 }
 
@@ -446,9 +413,18 @@ static int __init cdevmod_init(void)
 	}
 	alloc_flags.dev_created = 1;
 	MOD_DEBUG(KERN_DEBUG, "%s dev %d:%d created",
-		  major ? "Dynamic" : "Static",
-	          MAJOR(hive_dev), MINOR(hive_dev));
+		major ? "Dynamic" : "Static",
+	        MAJOR(hive_dev), MINOR(hive_dev));
 
+        if ((hive_class = class_create(THIS_MODULE, "hive_class")) == NULL) {
+		unregister_chrdev_region(hive_dev, 1);
+		return -1;
+	}
+	if (device_create(hive_class, NULL, hive_dev, NULL, "hive_dev") == NULL) {
+		class_destroy(hive_class);
+		unregister_chrdev_region(hive_dev, 1);
+		return -1;
+	}
 	cdev_init(&hive_cdev, &hive_fops);
 	// after call below the device becomes active
 	// so all stuff should be initialized before

@@ -19,7 +19,6 @@
         #define SPINLOCK 0
 #endif
 
-
 MODULE_DESCRIPTION("threads, lists, synchronization tests");
 MODULE_AUTHOR("rtchoke");
 MODULE_VERSION("0.1");
