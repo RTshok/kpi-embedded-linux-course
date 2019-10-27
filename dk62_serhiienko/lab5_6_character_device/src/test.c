@@ -36,9 +36,9 @@ int main(int argc, char **argv)
 
 	len_2 = sizeof(buf_2);
 	if (-1 == ioctl(fd, CHG_BUF, 100)) {
-		printf("ioctl error\n", fd);
+		printf("ioctl error\n");
 	} else {
-		printf("buf size change to 100\n", fd);	
+		printf("buf size change to 100\n");	
 		lseek(fd, 0, SEEK_SET);
 		offset = write(fd, buf_2, len_2);
 		printf("write return: offset=%d\n", offset);
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 	}
 
 	if (-1 == ioctl(fd, ADD_PHR, 1)) {
-		printf("device %d : ioctl error\n", fd);
+		printf("device %d : ioctl error\n");
 		
 	} else {
 		lseek(fd, 0, SEEK_SET);

@@ -66,4 +66,20 @@
 Створено тестову програму, яка створює файловий дескриптор, відкриває його, пише\зчитує в\з нього дані, змінює розмір буферу, та прикріплює до буферу магічну фразу.
 
 
+write return: offset=32, message=Wow, we made these bees TWERK !
+read return: offset=32, message=Wow, we made these bees TWERK !
+buf size change to 100
+write return: offset=51
+read return: offset=51, message=Wow, we made these bees TWERK ! Let's intrude them
+Return from read callback: offset=100, message=Wow, we made these bees TWERK ! Let's intrude themWow, we made these bees TWERK !
+
+[  336.202857] hivemod: Seeking to position: 0
+
+[  336.202862] hivemod: read 51 bytes from position: 0
+
+[  336.202887] hivemod: Seeking to position: 0
+
+[  336.202893] hivemod: read 100 bytes from position: 0
+
+[  336.202916] hivemod: File entry 000000007158f2b2 unlinked
 
