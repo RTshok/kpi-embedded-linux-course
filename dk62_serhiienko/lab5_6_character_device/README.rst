@@ -60,26 +60,37 @@
 Виконання роботи
 ----------------
 
-Було модифіковано вихідний код, наданий викладачем. Додано механізм зчитування та запису у буфер `` cdev_write`` та `` cdev_read``
-Написані функція пошуку у буфері `` cdev_lseek`` та функція форматування буфера `` cdev_ioctl``.
+Було модифіковано вихідний код, наданий викладачем. Додано механізм зчитування та запису у буфер ``cdev_write`` та ``cdev_read``
+Написані функція пошуку у буфері ``cdev_lseek`` та функція форматування буфера ``cdev_ioctl`` .
 Написані функції врапери(wrappers) які використовують *API* ядра, що дозволяють проводити запис у червоно-чорне дерево, а також зчитування та видалення елементів з дерева.
 Створено тестову програму, яка створює файловий дескриптор, відкриває його, пише\зчитує в\з нього дані, змінює розмір буферу, та прикріплює до буферу магічну фразу.
+*Результат роботи тестової програми:*
 
+   .. code-block:: C
+   
+   
+       write return: offset=32, message=Wow, we made these bees TWERK !
+       read return: offset=32, message=Wow, we made these bees TWERK !
+       buf size change to 100
+       write return: offset=51
+       read return: offset=51, message=Wow, we made these bees TWERK ! Let's intrude them
+       Return from read callback: offset=100, message=Wow, we made these bees TWERK ! Let's intrude themWow, we made these bees TWERK !
 
-write return: offset=32, message=Wow, we made these bees TWERK !
-read return: offset=32, message=Wow, we made these bees TWERK !
-buf size change to 100
-write return: offset=51
-read return: offset=51, message=Wow, we made these bees TWERK ! Let's intrude them
-Return from read callback: offset=100, message=Wow, we made these bees TWERK ! Let's intrude themWow, we made these bees TWERK !
+       [  336.202857] hivemod: Seeking to position: 0
 
-[  336.202857] hivemod: Seeking to position: 0
+       [  336.202862] hivemod: read 51 bytes from position: 0
 
-[  336.202862] hivemod: read 51 bytes from position: 0
+       [  336.202887] hivemod: Seeking to position: 0
 
-[  336.202887] hivemod: Seeking to position: 0
+       [  336.202893] hivemod: read 100 bytes from position: 0
 
-[  336.202893] hivemod: read 100 bytes from position: 0
+       [  336.202916] hivemod: File entry 000000007158f2b2 unlinked
+       
+       
+Висновки
+--------
 
-[  336.202916] hivemod: File entry 000000007158f2b2 unlinked
+Було модифіковано отриманий від викладача символьний пристрій, який ще можна назвати scull, тому що ций пристрій не потребує
+прямої взаємодії з залізом, і використовує лише пам'ять системи.
+Заглиблюючись далі у світ *kernel linux* стає зрозумілішою та прозорішою архітектура UNIX-подібних систем, що на мій погляд - захоплююче, адже використовуючи надане ядром API, можна створити свою кастомну, унікальну систему!
 
