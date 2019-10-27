@@ -214,9 +214,9 @@ static int cdev_release(struct inode *inode, struct file *file)
 /**
  * cdev_read() - called on file read() operation
  * @file: VFS file opened by a process
- * @buf:
- * @count:
- * @loff:
+ * @buf: buffer where read from
+ * @count: how many bytes should be read
+ * @loff: current position in the file
  */
 static ssize_t cdev_read(struct file *file, char __user *buf, 
 			 size_t count, loff_t *loff)
@@ -250,10 +250,9 @@ static ssize_t cdev_read(struct file *file, char __user *buf,
 /**
  * cdev_write() - callback for file write() operation
  * @file: VFS file opened by a process
- * @buf:
- * @count:
-
- * @loff:
+ * @buf: buffer where to write
+ * @count: how many bytes should be written
+ * @loff: current position in the flie
  */
 static ssize_t cdev_write(struct file *file, const char __user *buf,
 			  size_t count, loff_t *loff)
